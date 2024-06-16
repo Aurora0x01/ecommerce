@@ -4,7 +4,9 @@ from django.http import JsonResponse
 import json
 import datetime
 from .utils import cookieCart, cartData, guestOrder
-
+from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 def store(request):
      if request.user.is_authenticated:
         customer = request.user.customer
@@ -107,3 +109,31 @@ def processOrder(request):
           zipcode=data['shipping']['zipcode'],
           )
      return JsonResponse('Payment submitted...', safe=False)
+
+def signup_view(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('signin')
+    else:
+        form = UserCreationForm()
+    return render(request, 'store/signup.html', {'form': form})
+
+def signin_view(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('store')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'store/signin.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('store')
+
+def home_view(request):
+    return render(request, 'store/store.html')
