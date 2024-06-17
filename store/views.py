@@ -13,23 +13,17 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
+from django.shortcuts import render
+from django.core.exceptions import ObjectDoesNotExist
+
 def store(request):
-     if request.user.is_authenticated:
+    try:
         customer = request.user.customer
-        order, created = Order.objects.get_or_create(customer=customer, complete=False)
-        items = order.orderitem_set.all()
-        cartItems = order.get_cart_items
-        shipping = order.shipping  # Get the shipping status from the order
-     else:
-        cookieData= cookieCart(request)
-        cartItems = cookieData['cartItems']
-        order = cookieData['order']
-        items = cookieData['items']
-        
-    
-     products = Product.objects.all()
-     context = {'products': products, 'cartItems': cartItems, 'shipping': False}
-     return render(request, 'store/store.html', context)
+    except ObjectDoesNotExist:
+        customer = None
+
+    context = {'customer': customer}
+    return render(request, 'store/store.html', context)
 
 def cart(request):
      if request.user.is_authenticated:
