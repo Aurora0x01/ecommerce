@@ -1,4 +1,6 @@
 from django.shortcuts import render
+
+from store.forms import CustomUserCreationForm
 from .models import *
 from django.http import JsonResponse
 import json
@@ -7,6 +9,10 @@ from .utils import cookieCart, cartData, guestOrder
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib import messages
 def store(request):
      if request.user.is_authenticated:
         customer = request.user.customer
@@ -110,26 +116,35 @@ def processOrder(request):
           )
      return JsonResponse('Payment submitted...', safe=False)
 
-def signup_view(request):
+def registerPage(request):
+    form = CustomUserCreationForm()
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect('signin')
-    else:
-        form = UserCreationForm()
-    return render(request, 'store/signup.html', {'form': form})
+            user = form.save()
+            Customer.objects.create(user=user, name=user.username, email=user.email)
+            username = form.cleaned_data.get('username')
+            messages.success(request, 'Account was created for ' + username)
+            login(request, user)
+            return redirect('store')
+    context = {'form': form}
+    return render(request, 'store/register.html', context)
 
-def signin_view(request):
+def signinPage(request):
+    form = AuthenticationForm()
     if request.method == 'POST':
         form = AuthenticationForm(data=request.POST)
         if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            return redirect('store')
-    else:
-        form = AuthenticationForm()
-    return render(request, 'store/signin.html', {'form': form})
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('store')
+            else:
+                messages.error(request, 'Invalid username or password')
+    context = {'form': form}
+    return render(request, 'store/signin.html', context)
 
 def logout_view(request):
     logout(request)
