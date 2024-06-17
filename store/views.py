@@ -13,17 +13,25 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from django.shortcuts import render
-from django.core.exceptions import ObjectDoesNotExist
-
 def store(request):
-    try:
+    if request.user.is_authenticated:
         customer = request.user.customer
-    except ObjectDoesNotExist:
+        order, created = Order.objects.get_or_create(customer=customer, complete=False)
+        items = order.orderitem_set.all()
+        cartItems = order.get_cart_items
+        shipping = order.shipping
+    else:
+        cookieData = cookieCart(request)
+        cartItems = cookieData['cartItems']
+        order = cookieData['order']
+        items = cookieData['items']
         customer = None
 
-    context = {'customer': customer}
+    products = Product.objects.all()
+    print(products)  # Debugging line to verify products are fetched
+    context = {'products': products, 'cartItems': cartItems, 'shipping': False}
     return render(request, 'store/store.html', context)
+
 
 def cart(request):
      if request.user.is_authenticated:
@@ -116,7 +124,7 @@ def registerPage(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            Customer.objects.create(user=user, name=user.username, email=user.email)
+            Customer.objects.create(user=user, email=user.email)
             username = form.cleaned_data.get('username')
             messages.success(request, 'Account was created for ' + username)
             login(request, user)
@@ -140,9 +148,22 @@ def signinPage(request):
     context = {'form': form}
     return render(request, 'store/signin.html', context)
 
-def logout_view(request):
-    logout(request)
-    return redirect('store')
+
 
 def home_view(request):
     return render(request, 'store/store.html')
+from django.shortcuts import redirect
+
+def custom_login(request):
+    if request.method == 'POST':
+        # Authentication logic here
+        if User is not None:
+            login(request, User)
+            return redirect('store')
+    return render(request, 'login.html')
+
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('store')
